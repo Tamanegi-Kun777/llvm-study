@@ -3,7 +3,7 @@
  */
 TokenStream::~TokenStream(){
     for(int i=0; i<Tokens.size();i++){
-        SAFE_DELETE(Tokens[i])
+        SAFE_DELETE(Tokens[i]);
     }
     Tokens.clear();
 }
@@ -46,11 +46,11 @@ bool TokenStream::ungetToken(int times){
  *   格納されたトークン一覧を表示する
  */
 bool TokenStream::printTokens(){
-    std::vector<Tokens*>;;iterator titer =Tokens.begin();
+    std::vector<Token*>::iterator titer =Tokens.begin();
     while(titer != Tokens.end() ){
         fprintf(stdout,"%d:", (*titer)->getTokenType());
         if((*titer)->getTokenType() !=TOK_EOF)
-            fprintf(stdput,"%s\n", (*titer)->getTokenString().c_str());
+            fprintf(stdout,"%s\n", (*titer)->getTokenString().c_str());
         ++titer;
     }
     return true;
