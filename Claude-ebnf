@@ -1,0 +1,32 @@
+program
+    : { function }
+    ;
+
+function
+    : "int" identifier "(" ")" block
+    ;
+
+block
+    : "{" { statement } "}"
+    ;
+
+statement
+    : "int" identifier ";"
+    | identifier "=" expr ";"
+    | "return" expr ";"
+    ;
+
+expr
+    : term { ("+" | "-") term }
+    ;
+
+term
+    : factor { ("*" | "/") factor }
+    ;
+
+factor
+    : number
+    | identifier
+    | identifier "(" ")"
+    | "(" expr ")"
+    ;

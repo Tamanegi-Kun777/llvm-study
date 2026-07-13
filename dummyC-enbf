@@ -1,0 +1,10 @@
+translation_unit
+	: { external_declaration }
+external_declaration
+	: function_declaration
+	| function_definition
+	;
+
+function_declaration
+    : prototype , ";"
+    

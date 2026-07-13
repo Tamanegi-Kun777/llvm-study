@@ -1,0 +1,14 @@
+digraph "CFG for 'loop' function" {
+	label="CFG for 'loop' function";
+
+	Node0x32ed6730 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#b9d0f970",label="{entry:\l  %n.addr = alloca i32, align 4\l  %i = alloca i32, align 4\l  store i32 %n, i32* %n.addr, align 4\l  store i32 0, i32* %i, align 4\l  br label %for.cond\l}"];
+	Node0x32ed6730 -> Node0x32ed6f50;
+	Node0x32ed6f50 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870",label="{for.cond:                                         \l  %0 = load i32, i32* %i, align 4\l  %1 = load i32, i32* %n.addr, align 4\l  %cmp = icmp slt i32 %0, %1\l  br i1 %cmp, label %for.body, label %for.end\l|{<s0>T|<s1>F}}"];
+	Node0x32ed6f50:s0 -> Node0x32ed7160;
+	Node0x32ed6f50:s1 -> Node0x32ed71e0;
+	Node0x32ed7160 [shape=record,color="#b70d28ff", style=filled, fillcolor="#bb1b2c70",label="{for.body:                                         \l  %2 = load i32, i32* %i, align 4\l  %call = call i32 (i8*, ...) @printf(i8* noundef getelementptr inbounds ([4 x\l... i8], [4 x i8]* @.str, i64 0, i64 0), i32 noundef %2)\l  br label %for.inc\l}"];
+	Node0x32ed7160 -> Node0x32ed7780;
+	Node0x32ed7780 [shape=record,color="#b70d28ff", style=filled, fillcolor="#bb1b2c70",label="{for.inc:                                          \l  %3 = load i32, i32* %i, align 4\l  %inc = add nsw i32 %3, 1\l  store i32 %inc, i32* %i, align 4\l  br label %for.cond, !llvm.loop !6\l}"];
+	Node0x32ed7780 -> Node0x32ed6f50;
+	Node0x32ed71e0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#b9d0f970",label="{for.end:                                          \l  %4 = load i32, i32* %i, align 4\l  ret i32 %4\l}"];
+}
