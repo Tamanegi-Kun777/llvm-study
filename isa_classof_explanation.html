@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>isa と classof の仕組み(9ccとの対応)</title>
+<style>
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+    line-height: 1.7;
+    color: #222;
+    background: #fdfdfd;
+  }
+  h1 {
+    border-bottom: 3px solid #444;
+    padding-bottom: 8px;
+  }
+  h2 {
+    margin-top: 40px;
+    border-left: 6px solid #666;
+    padding-left: 10px;
+  }
+  h3 {
+    margin-top: 28px;
+    color: #333;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 20px 0 30px 0;
+    font-size: 0.95em;
+  }
+  th, td {
+    border: 1px solid #ccc;
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #333;
+    color: #fff;
+  }
+  tr:nth-child(even) {
+    background: #f2f2f2;
+  }
+  code {
+    background: #eee;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: "Consolas", "Menlo", monospace;
+  }
+  pre {
+    background: #272822;
+    color: #f8f8f2;
+    padding: 14px 18px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 0.9em;
+    line-height: 1.5;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+  }
+  .note {
+    background: #fff8e1;
+    border-left: 5px solid #ffca28;
+    padding: 10px 15px;
+    margin: 20px 0;
+  }
+  .diagram {
+    background: #eef3f8;
+    border-left: 5px solid #4a90d9;
+    padding: 14px 18px;
+    margin: 20px 0;
+    font-family: "Consolas", "Menlo", monospace;
+    white-space: pre;
+    font-size: 0.9em;
+  }
+</style>
+</head>
+<body>
+
+<h1>isa と classof の仕組み</h1>
+<p>9ccの <code>kind</code>(enumの値)による判定と比較しながら、DummyC(LLVM)の <code>isa</code> / <code>classof</code> を整理する。</p>
+
+<h2>前提のおさらい:なぜこの仕組みが必要なのか</h2>
+<p>
+9ccでは、すべてのノードが同じ <code>Node</code> という1つの構造体だった。
+</p>
+<pre><code>struct Node {
+  NodeKind kind;  // ND_ADD, ND_IF, ND_NUM ...
+  Node *lhs;
+  Node *rhs;
+  ...
+};</code></pre>
+<p>
+「今扱っているノードが何の種類か」を確認するには、<code>node-&gt;kind</code> というフィールドを直接見るだけでよかった。
+</p>
+<pre><code>if (node->kind == ND_ADD) { ... }</code></pre>
+
+<p>
+しかしDummyCでは、<code>BinaryExprAST</code>, <code>NumberAST</code>, <code>VariableAST</code> のように種類ごとに別々のクラスを作り、
+それぞれが <code>BaseAST</code> という共通の親クラスから継承する、という設計を取っている。
+</p>
+<pre><code>BaseAST *node = ...;   // これは、本当は BinaryExprAST かもしれないし、NumberAST かもしれない</code></pre>
+<p>
+<code>node</code> という変数は <code>BaseAST*</code> という型なので、見た目だけではその先が実際には何のクラスなのか分からない。
+ここで「今この <code>node</code> は実際には <code>BinaryExprAST</code> ですか」という確認をするための仕組みが <code>isa</code> と <code>classof</code>。
+</p>
+
+<h2>isa とは何か</h2>
+<p>
+<code>llvm::isa&lt;T&gt;(ポインタ)</code> は、LLVMが用意している「このポインタは本当に <code>T</code> という型か」を確認する便利な関数。
+</p>
+<pre><code>if(llvm::isa&lt;BinaryExprAST&gt;(stmt)){
+  // stmt は、本当は BinaryExprAST だった
+}</code></pre>
+<p>
+これは9ccで言えば
+</p>
+<pre><code>if (node->kind == ND_ADD || node->kind == ND_SUB || ...) {
+  // これは、二項演算ノードだった
+}</code></pre>
+<p>
+に相当する。「<code>stmt</code> という <code>BaseAST*</code> のポインタが、実は <code>BinaryExprAST</code> というより具体的な種類だったか」を <code>true</code>/<code>false</code> で教えてくれる。
+</p>
+
+<h2>isa は内部で何をしているのか(ここが本題)</h2>
+<p>
+<code>isa&lt;T&gt;(ポインタ)</code> は、実はプログラマが書いた <code>classof</code> という関数を代わりに呼び出しているだけ。以下の2つは実質的に同じ意味になる。
+</p>
+<pre><code>llvm::isa&lt;BinaryExprAST&gt;(stmt)</code></pre>
+<pre><code>BinaryExprAST::classof(stmt)</code></pre>
+<p>
+つまり <code>isa</code> 自体は「どうやって判定するか」を知らない。判定の具体的な中身は、各クラスが自分で <code>classof</code> という関数として用意しておく必要がある。
+<code>isa</code> は、その <code>classof</code> を呼び出す共通の窓口にすぎない。
+</p>
+
+<h2>classof をもう一度、丁寧に</h2>
+<pre><code>class BinaryExprAST : public BaseAST
+{
+  ...
+public:
+  // BinaryExprASTなのでtrueを返す
+  static inline bool classof(BinaryExprAST const*){return true;};
+
+  // 渡されたBaseASTがBinaryExprASTか判定する
+  static inline bool classof(BaseAST const* base){
+    return base->getValueID() == BinaryExprID;
+  };
+};</code></pre>
+<p><code>classof</code> は2つ用意されていることに注目。それぞれ役割が違う。</p>
+
+<h3>1つ目: classof(BinaryExprAST const*)</h3>
+<pre><code>static inline bool classof(BinaryExprAST const*){return true;}</code></pre>
+<p>
+「もし渡されたポインタがすでに <code>BinaryExprAST*</code> 型として宣言されているなら、それは当然 <code>BinaryExprAST</code> です。無条件に <code>true</code> を返します」という当たり前の判定。
+実際にはあまり使われないが、<code>isa</code> の仕組みが正しく動くために形式的に必要とされている。
+</p>
+
+<h3>2つ目: classof(BaseAST const* base)</h3>
+<pre><code>static inline bool classof(BaseAST const* base){
+  return base->getValueID() == BinaryExprID;
+}</code></pre>
+<p>
+こちらが実際に使われる本命の判定。「渡された <code>BaseAST*</code>(親クラスのポインタとして扱われているもの)の <code>getValueID()</code>(<code>ID</code>というメンバー変数を返す関数)が、
+<code>BinaryExprID</code>(<code>enum AstID</code> の値)と一致するか」を確認している。
+</p>
+
+<h2>BaseAST の ID というメンバー変数を、もう一度確認</h2>
+<pre><code>class BaseAST
+{
+  AstID ID;
+public:
+  BaseAST(AstID id) : ID(id){};
+  AstID getValueID() const {return ID;};
+};</code></pre>
+<p>
+すべての <code>BaseAST</code> から継承したクラスは、コンストラクタで自分の種類を <code>ID</code> という変数に記録しておく。
+</p>
+<pre><code>BinaryExprAST(...) : BaseAST(BinaryExprID), ...{};</code></pre>
+<p>
+<code>BinaryExprAST</code> が作られるその瞬間に、「私は <code>BinaryExprID</code> という種類です」と親クラス(<code>BaseAST</code>)の <code>ID</code> に記録しておく、というわけ。
+これは9ccの
+</p>
+<pre><code>node->kind = ND_ADD;</code></pre>
+<p>
+と全く同じ役割。<code>classof</code> は、この記録された <code>ID</code> を確認するだけ。
+</p>
+
+<h2>流れの図</h2>
+<div class="diagram">1. BinaryExprAST が、作られるとき
+   → BaseAST(BinaryExprID) が呼ばれる
+   → ID という変数に、BinaryExprID が記録される
+      (9ccの node->kind = ND_ADD; と同じ)
+
+2. isa&lt;BinaryExprAST&gt;(stmt) が、呼ばれる
+   → 内部で、BinaryExprAST::classof(stmt) が、呼ばれる
+   → stmt->getValueID() が、ID を返す
+   → その ID が、BinaryExprID と、一致するか、確認する
+      (9ccの node->kind == ND_ADD と同じ)
+
+3. 一致すれば true、しなければ false が、isa の戻り値になる</div>
+
+<h2>dyn_cast との関係</h2>
+<p><code>isa</code> とセットでよく使われる <code>dyn_cast</code> にも触れておく。</p>
+<pre><code>BinaryExprAST *bin = llvm::dyn_cast&lt;BinaryExprAST&gt;(stmt);</code></pre>
+<p>
+<code>dyn_cast&lt;T&gt;(ポインタ)</code> は、「もし <code>isa&lt;T&gt;(ポインタ)</code> が <code>true</code> なら、そのポインタを実際に <code>T*</code> 型に変換して返してください」という意味。
+内部で <code>isa</code>(つまり <code>classof</code>)をまず確認してから変換を行っている。もし種類が違えば <code>NULL</code> が返ってくる。
+</p>
+<div class="note">
+9ccでは、こういった「安全な型変換」という考え方自体が無かった。9ccでは <code>Node*</code> という1種類のポインタしか無かったので、変換の必要がそもそも無かった。
+</div>
+
+<h2>まとめ</h2>
+<table>
+<thead>
+<tr><th>用語</th><th>役割</th><th>9ccとの対応</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>BaseAST::ID</code></td>
+  <td>「今このノードが何の種類か」を記録するメンバー変数</td>
+  <td><code>node-&gt;kind</code></td>
+</tr>
+<tr>
+  <td><code>classof</code></td>
+  <td>「渡されたポインタがこのクラスかどうか」を <code>ID</code> を見て判定する、各クラス自身が用意する専用の関数</td>
+  <td><code>node-&gt;kind == ND_ADD</code> という比較そのもの</td>
+</tr>
+<tr>
+  <td><code>isa&lt;T&gt;(ポインタ)</code></td>
+  <td><code>T::classof(ポインタ)</code> を代わりに呼び出してくれる共通の窓口関数</td>
+  <td><code>if (node-&gt;kind == ND_ADD)</code> の書き方を統一したもの</td>
+</tr>
+<tr>
+  <td><code>dyn_cast&lt;T&gt;(ポインタ)</code></td>
+  <td><code>isa</code> で確認した上で、実際に型を変換して返してくれる便利関数</td>
+  <td>(9ccには対応する概念が無い。型が1種類だったため)</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+<code>isa</code> と <code>classof</code> は、「9ccが <code>kind</code> という1つの変数の比較で済ませていたことを、C++のオブジェクト指向の流儀に沿って、
+各クラスが自分自身で判定の仕方を提供する」という形に置き換えた仕組みである。LLVM自身がこのパターンを標準的な作法として広く使っているため、DummyCもそれに倣っている。
+</p>
+
+</body>
+</html>

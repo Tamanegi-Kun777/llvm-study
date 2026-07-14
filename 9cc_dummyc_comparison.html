@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>9cc と DummyC(きつねさん) 対照表</title>
+<style>
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+    line-height: 1.6;
+    color: #222;
+    background: #fdfdfd;
+  }
+  h1 {
+    border-bottom: 3px solid #444;
+    padding-bottom: 8px;
+  }
+  h2 {
+    margin-top: 40px;
+    border-left: 6px solid #666;
+    padding-left: 10px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 20px 0 40px 0;
+    font-size: 0.95em;
+  }
+  th, td {
+    border: 1px solid #ccc;
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #333;
+    color: #fff;
+  }
+  tr:nth-child(even) {
+    background: #f2f2f2;
+  }
+  code {
+    background: #eee;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: "Consolas", "Menlo", monospace;
+  }
+  .note {
+    background: #fff8e1;
+    border-left: 5px solid #ffca28;
+    padding: 10px 15px;
+    margin: 20px 0;
+  }
+</style>
+</head>
+<body>
+
+<h1>9cc と DummyC(きつねさん) 対照表</h1>
+
+<h2>文法要素の対照表</h2>
+<table>
+<thead>
+<tr>
+  <th>DummyC(きつねさん)</th>
+  <th>9cc</th>
+  <th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr><td><code>TranslationUnit</code></td><td><code>program</code></td><td>プログラム全体(ファイル全体)</td></tr>
+<tr><td><code>ExternalDeclaration</code></td><td><code>is_function()</code>による判定と、<code>function()</code>, <code>global_var()</code>の呼び出し</td><td>関数宣言または、関数定義</td></tr>
+<tr><td><code>FunctionDeclaration</code></td><td><code>function()</code>の中の<code>if (consume(";"))</code>のケース</td><td>宣言のみの関数(例: <code>int printf();</code>)</td></tr>
+<tr><td><code>FunctionDefinition</code></td><td><code>function()</code>の中の<code>fn->body = stmt();</code>のケース</td><td>本体を持つ、関数の定義</td></tr>
+<tr><td><code>Prototype</code></td><td><code>function()</code>の中の、型・関数名・引数リストを読む部分</td><td>関数の型・名前・引数の並び</td></tr>
+<tr><td><code>FunctionStatement</code></td><td><code>stmt()</code>の中の<code>{</code>の処理(<code>ND_BLOCK</code>)</td><td>関数の中身(<code>{ ... }</code>)</td></tr>
+<tr><td><code>VariableDeclaration</code></td><td><code>stmt()</code>の中の<code>peek_type_keyword()</code>の分岐</td><td><code>int a;</code>のような、変数宣言</td></tr>
+<tr><td><code>Statement</code></td><td><code>stmt()</code></td><td>1つの文</td></tr>
+<tr><td><code>ExpressionStatement</code></td><td><code>stmt()</code>の中の、通常の式文</td><td><code>a = 1;</code>のような、式+<code>;</code></td></tr>
+<tr><td><code>JumpStatement</code></td><td><code>stmt()</code>の中の<code>TK_RETURN</code>の分岐</td><td><code>return</code>文</td></tr>
+<tr><td><code>AssignmentExpression</code></td><td><code>assign()</code></td><td>代入式(<code>a = 1</code>のような)</td></tr>
+<tr><td><code>AdditiveExpression</code></td><td><code>add()</code></td><td>足し算・引き算</td></tr>
+<tr><td><code>MultiplicativeExpression</code></td><td><code>mul()</code></td><td>掛け算・割り算</td></tr>
+<tr><td><code>PostfixExpression</code></td><td><code>primary()</code>の中の、関数呼び出しの部分</td><td>変数や数値の後に<code>(</code>が続く、関数呼び出し</td></tr>
+<tr><td><code>PrimaryExpression</code></td><td><code>primary()</code>の中の、数値・変数の部分</td><td>数値・変数など、それ以上分解できない、最小単位の式</td></tr>
+</tbody>
+</table>
+
+<div class="note">
+9ccの文法の階層(<code>expr = mul (...)*</code> / <code>mul = primary (...)*</code>)と、DummyCの<code>AdditiveExpression → MultiplicativeExpression → PostfixExpression → PrimaryExpression</code>という階層は、全く同じ優先順位の考え方に基づいています。
+</div>
+
+<h2>ノード(AST)の対照表</h2>
+<table>
+<thead>
+<tr>
+  <th>DummyC(<code>BaseAST</code>の派生クラス)</th>
+  <th>9cc(<code>NodeKind</code>の値)</th>
+</tr>
+</thead>
+<tbody>
+<tr><td><code>BinaryExprAST</code></td><td><code>ND_ADD</code>, <code>ND_SUB</code>, <code>ND_MUL</code>, <code>ND_DIV</code>, <code>ND_ASSIGN</code>(演算子の種類は<code>Op</code>という文字列で区別)</td></tr>
+<tr><td><code>NumberAST</code></td><td><code>ND_NUM</code></td></tr>
+<tr><td><code>VariableAST</code></td><td><code>ND_LVAR</code></td></tr>
+<tr><td><code>CallExprAST</code></td><td><code>ND_FUNCALL</code></td></tr>
+<tr><td><code>JumpStmtAST</code></td><td><code>ND_RETURN</code></td></tr>
+<tr><td><code>NullExprAST</code></td><td>(9ccには対応するものが無い。<code>;</code>だけの空の文)</td></tr>
+<tr><td><code>VariableDeclAST</code></td><td>(9ccでは変数宣言自体を<code>ND_BLOCK</code>の中に直接混ぜて扱っていた)</td></tr>
+</tbody>
+</table>
+
+<h2>補足:名前の付け方の傾向</h2>
+<p>
+DummyC(きつねさん)は <code>Expression</code>(式)、<code>Statement</code>(文)、<code>Declaration</code>(宣言)という英語の文法用語を、そのままクラス名・関数名に使っています。
+これは多くのプログラミング言語の教科書や実際のコンパイラの実装でよく使われる標準的な命名の慣習です。
+9ccはより短くシンプルな名前(<code>expr</code>, <code>add</code>, <code>mul</code>, <code>primary</code>)を使っていましたが、指し示している概念自体は共通しています。
+</p>
+
+</body>
+</html>

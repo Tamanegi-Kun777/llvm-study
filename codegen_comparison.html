@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>codegen.cpp と 9cc(codegen.c) 対照表</title>
+<style>
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+    line-height: 1.6;
+    color: #222;
+    background: #fdfdfd;
+  }
+  h1 {
+    border-bottom: 3px solid #444;
+    padding-bottom: 8px;
+  }
+  h2 {
+    margin-top: 40px;
+    border-left: 6px solid #666;
+    padding-left: 10px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 20px 0 40px 0;
+    font-size: 0.95em;
+  }
+  th, td {
+    border: 1px solid #ccc;
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #333;
+    color: #fff;
+  }
+  tr:nth-child(even) {
+    background: #f2f2f2;
+  }
+  code {
+    background: #eee;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: "Consolas", "Menlo", monospace;
+  }
+  .note {
+    background: #fff8e1;
+    border-left: 5px solid #ffca28;
+    padding: 10px 15px;
+    margin: 20px 0;
+  }
+</style>
+</head>
+<body>
+
+<h1>codegen.cpp(DummyC) と 9cc(codegen.c) 対照表</h1>
+
+<h2>関数の対照表</h2>
+<table>
+<thead>
+<tr>
+  <th>DummyC(codegen.cpp)</th>
+  <th>9cc(codegen.c / main.c)</th>
+</tr>
+</thead>
+<tbody>
+<tr><td><code>generatePrototype</code></td><td><code>main.c</code>の中の、関数のプロローグ部分</td></tr>
+<tr><td><code>generateFunctionDefinition</code></td><td><code>main.c</code>の<code>for (Function *fn = prog; ...)</code>ループ</td></tr>
+<tr><td><code>generateVariableDeclaration</code>(<code>CreateAlloca</code>)</td><td>9ccの<code>sub rsp, N</code>(スタック領域の確保)</td></tr>
+<tr><td><code>generateBinaryExprssion</code></td><td><code>gen()</code>の<code>ND_ADD</code>, <code>ND_SUB</code>などのケース</td></tr>
+<tr><td><code>generateCallExpression</code></td><td><code>gen()</code>の<code>ND_FUNCALL</code>のケース</td></tr>
+<tr><td><code>generateJumpStatement</code>(<code>CreateRet</code>)</td><td><code>gen()</code>の<code>ND_RETURN</code>のケース</td></tr>
+<tr><td><code>generateVariable</code>(<code>CreateLoad</code>)</td><td><code>gen()</code>の<code>ND_LVAR</code>のケース</td></tr>
+<tr><td><code>generateNumber</code></td><td><code>gen()</code>の<code>ND_NUM</code>のケース</td></tr>
+</tbody>
+</table>
+
+<div class="note">
+9ccでは、手動でアセンブリ命令を<code>printf</code>で書き出していましたが、LLVMでは<code>Builder-&gt;CreateAdd(...)</code>, <code>Builder-&gt;CreateLoad(...)</code>のように、専用のAPIを呼ぶだけでLLVM IRが自動的に組み立てられる、という大きな違いがあります。
+</div>
+
+<h2>LLVM 3.2 → LLVM 14 で変化したAPIのまとめ</h2>
+<table>
+<thead>
+<tr>
+  <th>項目</th>
+  <th>LLVM 3.2(きつねさんの本)</th>
+  <th>LLVM 14(今回の環境)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>LLVMContextの取得</td>
+  <td><code>llvm::getGlobalContext()</code></td>
+  <td>廃止。自分で<code>llvm::LLVMContext Context;</code>を持つ必要がある</td>
+</tr>
+<tr>
+  <td><code>getValueSymbolTable()</code>の戻り値</td>
+  <td><code>llvm::ValueSymbolTable &amp;</code>(参照)</td>
+  <td><code>llvm::ValueSymbolTable *</code>(ポインタ)</td>
+</tr>
+<tr>
+  <td><code>CreateLoad</code>の引数</td>
+  <td><code>CreateLoad(Value *Ptr, Name)</code>(型は自動推測)</td>
+  <td><code>CreateLoad(Type *Ty, Value *Ptr, Name)</code>(型を明示する必要がある)</td>
+</tr>
+</tbody>
+</table>
+
+</body>
+</html>
