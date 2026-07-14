@@ -307,7 +307,10 @@ BaseAST *Parser::visitAssignmentExpression(){
   }
   return NULL;
 }
-
+/*
+ *  PrimaryExpression用構文解析メソッド
+ *  @return 解析成功時：AST AST失敗時：NULL
+*/
 BaseAST *Parser::visitPrimaryExpression(){
   int bkup = Tokens->getCurIndex();
 
