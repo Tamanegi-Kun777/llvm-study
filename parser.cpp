@@ -1,17 +1,6 @@
 #include "parser.hpp"
 #include "lexer.hpp"
-#include <cstdlib>
 
-static bool debug_enabled() {
-    static bool checked = false;
-    static bool enabled = false;
-    if (!checked) {
-        enabled = (getenv("DCC_DEBUG") != nullptr);
-        checked = true;
-    }
-    return enabled;
-}
-#define DBG(...) do { if (debug_enabled()) fprintf(stderr, __VA_ARGS__); } while(0)
 
 Parser::Parser(std::string filename){
   Tokens = LexicalAnalysis(filename);
@@ -287,6 +276,7 @@ FunctionStmtAST *Parser::visitFunctionStatement(PrototypeAST *proto){
 }
 
 BaseAST *Parser::visitAssignmentExpression(){
+  DBG("[DEBUG] visitAssignmentExpression start, curType=%d, curStr=%s\n", Tokens->getCurType(), Tokens->getCurString().c_str());
   int bkup = Tokens->getCurIndex();
 
   BaseAST *lhs;
@@ -304,13 +294,11 @@ BaseAST *Parser::visitAssignmentExpression(){
         else{
           SAFE_DELETE(lhs);
           Tokens->applyTokenIndex(bkup);
-          return NULL;   // ← 追加
         }
       }
       else{
         SAFE_DELETE(lhs);
         Tokens->applyTokenIndex(bkup);
-        return NULL;   // ← 追加
       }
     }
     else{

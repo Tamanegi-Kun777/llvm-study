@@ -232,7 +232,7 @@ llvm::Value *CodeGen::generateCallExpression(CallExprAST *call_expr){
 
 llvm::Value *CodeGen::generateJumpStatement(JumpStmtAST *jump_stmt){
   BaseAST *expr = jump_stmt->getExpr();
-  llvm::Value *ret_v;
+  llvm::Value *ret_v = NULL;
 
   if(llvm::isa<BinaryExprAST>(expr)){
     ret_v = generateBinaryExprssion(llvm::dyn_cast<BinaryExprAST>(expr));
@@ -244,7 +244,13 @@ llvm::Value *CodeGen::generateJumpStatement(JumpStmtAST *jump_stmt){
     NumberAST *num = llvm::dyn_cast<NumberAST>(expr);
     ret_v = generateNumber(num->getNumberValue());
   }
-
+  else if(llvm::isa<CallExprAST>(expr)){
+    ret_v = generateCallExpression(llvm::dyn_cast<CallExprAST>(expr));
+  }
+  DBG("[CG] JumpStmt: exprType binary=%d var=%d num=%d, ret_v=%p\n",
+          llvm::isa<BinaryExprAST>(expr), llvm::isa<VariableAST>(expr),
+          llvm::isa<NumberAST>(expr), (void*)ret_v);
+  
   return Builder->CreateRet(ret_v);
 }
 
