@@ -14,6 +14,7 @@ bool Parser::doParse(){
     return false;
   }
   else{
+    Tokens->printTokens();
     return visitTranslationUnit();
   }
 };
@@ -29,6 +30,7 @@ TranslationUnitAST &Parser::getAST(){
 
 // TranslationUnit用構文解析メソッド
 bool Parser::visitTranslationUnit(){
+  fprintf(stderr, "[DEBUG] visitTranslationUnit start\n");//追加
   TU = new TranslationUnitAST();
 
   // ExternalDecl
@@ -37,6 +39,7 @@ bool Parser::visitTranslationUnit(){
       SAFE_DELETE(TU);
       return false;
     }
+    fprintf(stderr, "[DEBUG] TU loop end, curType=%d, curStr=%s\n", Tokens->getCurType(), Tokens->getCurString().c_str());
     if(Tokens->getCurType() == TOK_EOF){
       break;
     }
@@ -122,6 +125,7 @@ FunctionAST *Parser::visitFunctionDefinition(){
 // Prototype用構文解析メソッド
 // ※ 元のリポジトリでは関数名の読み取りとreturn文が欠落していたため、9ccの経験を基に補完
 PrototypeAST *Parser::visitPrototype(){
+   fprintf(stderr, "[DEBUG] visitPrototype start\n");//追加
   int bkup = Tokens->getCurIndex();
 
   // 戻り値の型 "int"
@@ -312,6 +316,7 @@ BaseAST *Parser::visitAssignmentExpression(){
  *  @return 解析成功時：AST AST失敗時：NULL
 */
 BaseAST *Parser::visitPrimaryExpression(){
+  fprintf(stderr, "[DEBUG] visitPrimaryExpression start, curType=%d, curStr=%s\n", Tokens->getCurType(), Tokens->getCurString().c_str());//追加
   int bkup = Tokens->getCurIndex();
 
   if(Tokens->getCurType() == TOK_IDENTIFIER &&
@@ -404,6 +409,7 @@ BaseAST *Parser::visitPostfixExpression(){
 }
 
 BaseAST *Parser::visitAdditiveExpression(BaseAST *lhs){
+  fprintf(stderr, "[DEBUG] visitAdditiveExpression start, curType=%d, curStr=%s\n", Tokens->getCurType(), Tokens->getCurString().c_str());
   int bkup = Tokens->getCurIndex();
 
   if(!lhs){
@@ -444,6 +450,7 @@ BaseAST *Parser::visitAdditiveExpression(BaseAST *lhs){
 }
 
 BaseAST *Parser::visitExpressionStatement(){
+  fprintf(stderr, "[DEBUG] visitExpressionStatement start, curType=%d, curStr=%s\n", Tokens->getCurType(), Tokens->getCurString().c_str());//追加
   BaseAST *assign_expr;
   if(Tokens->getCurString() == ";"){
     Tokens->getNextToken();
@@ -459,6 +466,7 @@ BaseAST *Parser::visitExpressionStatement(){
 }
 
 BaseAST *Parser::visitStatement(){
+  fprintf(stderr, "[DEBUG] visitStatement start, curType=%d, curStr=%s\n", Tokens->getCurType(), Tokens->getCurString().c_str());//追加
   BaseAST *stmt = NULL;
   if((stmt = visitExpressionStatement())){
     return stmt;
@@ -540,6 +548,7 @@ BaseAST *Parser::visitMultiplicativeExpression(BaseAST *lhs){
 }
 
 BaseAST *Parser::visitJumpStatement(){
+  fprintf(stderr, "[DEBUG] visitJumpStatement start, curType=%d, curStr=%s\n", Tokens->getCurType(), Tokens->getCurString().c_str());//追加
   int bkup = Tokens->getCurIndex();
   BaseAST *expr;
 
