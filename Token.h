@@ -14,6 +14,8 @@ enum TokenType {
     TOK_RETURN, // RETURN
     TOK_IF, // IF
     TOK_ELSE, // ELSE
+    TOK_WHILE, // WHILE
+    TOK_FOR, // FOR
     TOK_EOF // EOF
 };
 

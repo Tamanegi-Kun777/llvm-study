@@ -47,6 +47,7 @@ private:
   BaseAST *visitStatement();
   BaseAST *visitIfStatement();
   BaseAST *visitWhileStatement();
+  BaseAST *visitForStatement();
   BaseAST *visitExpressionStatement();
   BaseAST *visitJumpStatement();
   BaseAST *visitAssignmentExpression();

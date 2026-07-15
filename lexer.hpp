@@ -19,6 +19,7 @@ enum TokenType
   TOK_IF,
   TOK_ELSE,
   TOK_WHILE, // WHILE
+  TOK_FOR, // FOR
   TOK_EOF
 };
 

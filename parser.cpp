@@ -666,6 +666,114 @@ BaseAST *Parser::visitWhileStatement(){
 
   return while_stmt;
 }
+BaseAST *Parser::visitForStatement(){
+  DBG("[DEBUG] visitForStatement start, curType=%d, curStr=%s\n", Tokens->getCurType(), Tokens->getCurString().c_str());
+  int bkup = Tokens->getCurIndex();
+
+  // "for"
+  if(Tokens->getCurType() != TOK_FOR){
+    return NULL;
+  }
+  Tokens->getNextToken();
+
+  // "("
+  if(Tokens->getCurType() == TOK_SYMBOL && Tokens->getCurString() == "("){
+    Tokens->getNextToken();
+  }
+  else{
+    Tokens->applyTokenIndex(bkup);
+    return NULL;
+  }
+
+  // init（代入文）
+  BaseAST *init = visitAssignmentExpression();
+  if(!init){
+    Tokens->applyTokenIndex(bkup);
+    return NULL;
+  }
+
+  // ";"
+  if(Tokens->getCurType() == TOK_SYMBOL && Tokens->getCurString() == ";"){
+    Tokens->getNextToken();
+  }
+  else{
+    SAFE_DELETE(init);
+    Tokens->applyTokenIndex(bkup);
+    return NULL;
+  }
+
+  // cond（条件式）
+  BaseAST *condition = visitAssignmentExpression();
+  if(!condition){
+    SAFE_DELETE(init);
+    Tokens->applyTokenIndex(bkup);
+    return NULL;
+  }
+
+  // ";"
+  if(Tokens->getCurType() == TOK_SYMBOL && Tokens->getCurString() == ";"){
+    Tokens->getNextToken();
+  }
+  else{
+    SAFE_DELETE(init);
+    SAFE_DELETE(condition);
+    Tokens->applyTokenIndex(bkup);
+    return NULL;
+  }
+
+  // update（代入文）
+  BaseAST *update = visitAssignmentExpression();
+  if(!update){
+    SAFE_DELETE(init);
+    SAFE_DELETE(condition);
+    Tokens->applyTokenIndex(bkup);
+    return NULL;
+  }
+
+  // ")"
+  if(Tokens->getCurType() == TOK_SYMBOL && Tokens->getCurString() == ")"){
+    Tokens->getNextToken();
+  }
+  else{
+    SAFE_DELETE(init);
+    SAFE_DELETE(condition);
+    SAFE_DELETE(update);
+    Tokens->applyTokenIndex(bkup);
+    return NULL;
+  }
+
+  // "{"
+  if(Tokens->getCurType() == TOK_SYMBOL && Tokens->getCurString() == "{"){
+    Tokens->getNextToken();
+  }
+  else{
+    SAFE_DELETE(init);
+    SAFE_DELETE(condition);
+    SAFE_DELETE(update);
+    Tokens->applyTokenIndex(bkup);
+    return NULL;
+  }
+
+  ForStmtAST *for_stmt = new ForStmtAST(init, condition, update);
+
+  // body: statementの並び
+  BaseAST *stmt;
+  while((stmt = visitStatement())){
+    for_stmt->addBodyStmt(stmt);
+  }
+
+  // "}"
+  if(Tokens->getCurType() == TOK_SYMBOL && Tokens->getCurString() == "}"){
+    Tokens->getNextToken();
+  }
+  else{
+    SAFE_DELETE(for_stmt);
+    Tokens->applyTokenIndex(bkup);
+    return NULL;
+  }
+
+  return for_stmt;
+}
 BaseAST *Parser::visitStatement(){
   DBG("[DEBUG] visitStatement start, curType=%d, curStr=%s\n", Tokens->getCurType(), Tokens->getCurString().c_str());//追加
   BaseAST *stmt = NULL;
@@ -673,6 +781,9 @@ BaseAST *Parser::visitStatement(){
     return stmt;
   }
   else if((stmt = visitWhileStatement())){
+    return stmt;
+  }
+  else if((stmt = visitForStatement())){
     return stmt;
   }
   else if((stmt = visitExpressionStatement())){

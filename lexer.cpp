@@ -68,6 +68,9 @@ TokenStream *LexicalAnalysis(std::string input_filename){
         else if(token_str == "while"){
           next_token = new Token(token_str, TOK_WHILE, line_num);
         }
+        else if(token_str == "for"){
+          next_token = new Token(token_str, TOK_FOR, line_num);
+        }
         else{
           next_token = new Token(token_str, TOK_IDENTIFIER, line_num);
         }

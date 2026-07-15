@@ -19,7 +19,8 @@ enum AstID
   VariableID,
   NumberID,
   IfStmtID,
-  WhileStmtID
+  WhileStmtID,
+  ForStmtID
 };
 // ファイルの、先頭あたりに、追加
 class PrototypeAST;
@@ -220,6 +221,36 @@ public:
     return base->getValueID() == WhileStmtID;
   };
   BaseAST *getCondition(){return Condition;};
+  bool addBodyStmt(BaseAST *stmt){BodyStmts.push_back(stmt); return true;};
+  BaseAST *getBodyStmt(int i){
+    if(i < BodyStmts.size()){ return BodyStmts.at(i); }
+    else{ return NULL; }
+  };
+};
+/*
+ *  for文を表すAST
+ */
+class ForStmtAST : public BaseAST
+{
+  BaseAST *Init;
+  BaseAST *Condition;
+  BaseAST *Update;
+  std::vector<BaseAST*> BodyStmts;
+public:
+  ForStmtAST(BaseAST *init, BaseAST *condition, BaseAST *update)
+    : BaseAST(ForStmtID), Init(init), Condition(condition), Update(update){};
+  ~ForStmtAST(){
+    SAFE_DELETE(Init);
+    SAFE_DELETE(Condition);
+    SAFE_DELETE(Update);
+  };
+  static inline bool classof(ForStmtAST const*){return true;};
+  static inline bool classof(BaseAST const* base){
+    return base->getValueID() == ForStmtID;
+  };
+  BaseAST *getInit(){return Init;};
+  BaseAST *getCondition(){return Condition;};
+  BaseAST *getUpdate(){return Update;};
   bool addBodyStmt(BaseAST *stmt){BodyStmts.push_back(stmt); return true;};
   BaseAST *getBodyStmt(int i){
     if(i < BodyStmts.size()){ return BodyStmts.at(i); }

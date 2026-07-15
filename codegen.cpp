@@ -139,6 +139,9 @@ llvm::Value *CodeGen::generateStatement(BaseAST *stmt){
   else if(llvm::isa<WhileStmtAST>(stmt)){
     return generateWhileStatement(llvm::dyn_cast<WhileStmtAST>(stmt));
   }
+  else if(llvm::isa<ForStmtAST>(stmt)){
+    return generateForStatement(llvm::dyn_cast<ForStmtAST>(stmt));
+  }
   else{
     return NULL;
   }
@@ -249,6 +252,53 @@ llvm::Value *CodeGen::generateWhileStatement(WhileStmtAST *while_stmt){
   }
   // bodyが終端を持っていなければ、condへ戻る（ループ）
   if(!Builder->GetInsertBlock()->getTerminator()){
+    Builder->CreateBr(cond_bb);
+  }
+
+  // 以降の命令はafterブロックに積む
+  Builder->SetInsertPoint(after_bb);
+
+  return after_bb;
+}
+llvm::Value *CodeGen::generateForStatement(ForStmtAST *for_stmt){
+  // init を1回実行
+  generateStatement(for_stmt->getInit());
+
+  // 3つのブロックを作る
+  llvm::BasicBlock *cond_bb = llvm::BasicBlock::Create(Context, "for_cond", CurFunc);
+  llvm::BasicBlock *body_bb = llvm::BasicBlock::Create(Context, "for_body", CurFunc);
+  llvm::BasicBlock *after_bb = llvm::BasicBlock::Create(Context, "for_after", CurFunc);
+
+  // condへ無条件ジャンプ
+  Builder->CreateBr(cond_bb);
+
+  // condブロック: 条件を評価して分岐
+  Builder->SetInsertPoint(cond_bb);
+  BaseAST *cond = for_stmt->getCondition();
+  llvm::Value *cond_v = NULL;
+  if(llvm::isa<BinaryExprAST>(cond)){
+    cond_v = generateBinaryExprssion(llvm::dyn_cast<BinaryExprAST>(cond));
+  }
+  else if(llvm::isa<VariableAST>(cond)){
+    cond_v = generateVariable(llvm::dyn_cast<VariableAST>(cond));
+  }
+  else if(llvm::isa<NumberAST>(cond)){
+    cond_v = generateNumber(llvm::dyn_cast<NumberAST>(cond)->getNumberValue());
+  }
+  if(!cond_v){
+    return NULL;
+  }
+  Builder->CreateCondBr(cond_v, body_bb, after_bb);
+
+  // bodyブロック: 本体を生成し、その後updateを実行
+  Builder->SetInsertPoint(body_bb);
+  BaseAST *stmt;
+  for(int i = 0; (stmt = for_stmt->getBodyStmt(i)); i++){
+    generateStatement(stmt);
+  }
+  // bodyが終端を持っていなければ、updateを実行してcondへ戻る
+  if(!Builder->GetInsertBlock()->getTerminator()){
+    generateStatement(for_stmt->getUpdate());
     Builder->CreateBr(cond_bb);
   }
 
