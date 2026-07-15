@@ -12,6 +12,8 @@ enum TokenType {
     TOK_SYMBOL, // 記号
     TOK_INT, // INT
     TOK_RETURN, // RETURN
+    TOK_IF, // IF
+    TOK_ELSE, // ELSE
     TOK_EOF // EOF
 };
 

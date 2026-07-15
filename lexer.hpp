@@ -16,6 +16,8 @@ enum TokenType
   TOK_SYMBOL,
   TOK_INT,
   TOK_RETURN,
+  TOK_IF,
+  TOK_ELSE,
   TOK_EOF
 };
 

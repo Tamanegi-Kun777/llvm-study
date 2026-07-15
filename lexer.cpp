@@ -59,6 +59,12 @@ TokenStream *LexicalAnalysis(std::string input_filename){
         else if(token_str == "return"){
           next_token = new Token(token_str, TOK_RETURN, line_num);
         }
+        else if(token_str == "if"){
+          next_token = new Token(token_str, TOK_IF, line_num);
+        }
+        else if(token_str == "else"){
+          next_token = new Token(token_str, TOK_ELSE, line_num);
+        }
         else{
           next_token = new Token(token_str, TOK_IDENTIFIER, line_num);
         }
@@ -101,18 +107,34 @@ TokenStream *LexicalAnalysis(std::string input_filename){
         }
       }
       else{
-        if(next_char == '*' ||
+        if(next_char == '=' || next_char == '<' || next_char == '>' || next_char == '!'){
+          if(index < length && cur_line.at(index) == '='){
+            token_str += next_char;
+            token_str += '=';
+            index++;
+            next_token = new Token(token_str, TOK_SYMBOL, line_num);
+          }
+          else if(next_char == '!'){
+            fprintf(stderr, "unclear token : %c", next_char);
+            SAFE_DELETE(tokens);
+            return NULL;
+          }
+          else{
+            token_str += next_char;
+            next_token = new Token(token_str, TOK_SYMBOL, line_num);
+          }
+        }
+        else if(next_char == '*' ||
            next_char == '+' ||
            next_char == '-' ||
-           next_char == '=' ||
            next_char == ';' ||
            next_char == ',' ||
            next_char == '(' ||
            next_char == ')' ||
            next_char == '{' ||
-           next_char == '}'){
-          token_str += next_char;
-          next_token = new Token(token_str, TOK_SYMBOL, line_num);
+           next_char == '}' ){
+           token_str += next_char;
+           next_token = new Token(token_str, TOK_SYMBOL, line_num);
         }
         else{
           fprintf(stderr, "unclear token : %c", next_char);
