@@ -16,10 +16,10 @@
 #include "parser.hpp"
 #include "codegen.hpp"
 #include "option_parser.hpp"
-
+#include "llvm/IR/LegacyPassManager.h"
 int main(int argc, char **argv){
   llvm::InitializeNativeTarget();
-  llvm::sys::PrintStackTraceOnErrorSignal();
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 	llvm::PrettyStackTraceProgram X(argc, argv);
   llvm::EnableDebugBuffering = true;
 
@@ -34,7 +34,7 @@ int main(int argc, char **argv){
   }
 
   Parser *parser = new Parser(opt.getInputFileName());
-  if(parser->doParse()){
+  if(!parser->doParse()){
     fprintf(stderr, "error at parser or lexer\n");
     SAFE_DELETE(parser);
     exit(1);
@@ -64,7 +64,7 @@ int main(int argc, char **argv){
   }
 
 
-  int fd = open(opt.getOutputFileName().c_str(), O_WRONLY | O_CREAT, S_IWRITE);
+int fd = open(opt.getOutputFileName().c_str(), O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
   if(fd == -1){
     fprintf(stderr, "output file error\n");
     SAFE_DELETE(parser);
@@ -73,8 +73,9 @@ int main(int argc, char **argv){
   }
 
   llvm::raw_fd_ostream raw_stream(fd, true);
-  llvm::PrintModulePass pm(raw_stream);
-  pm.run(mod);
+  llvm::legacy::PassManager pm;
+  pm.add(llvm::createPrintModulePass(raw_stream));
+  pm.run(mod);       // ← ここを追加
   raw_stream.close();
 
   SAFE_DELETE(parser);

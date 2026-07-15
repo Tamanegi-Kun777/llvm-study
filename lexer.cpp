@@ -131,9 +131,7 @@ TokenStream *LexicalAnalysis(std::string input_filename){
   }
 
   // check EOF
-  if(ifs.eof()){
-    tokens->pushToken(new Token(token_str, TOK_EOF, line_num));
-  }
+  tokens->pushToken(new Token("", TOK_EOF, line_num));
 
   // close
   ifs.close();

@@ -1,3 +1,7 @@
+
+#include "Token.h"
+#include "TokenStream.h"
+
 /*
  *   デストラクタ
  */

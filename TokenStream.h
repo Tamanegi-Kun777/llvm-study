@@ -1,5 +1,6 @@
 #include <vector>
 #include <string>
+#include "APP.hpp"
 /*
  *   切り出したToken格納クラス
  */
