@@ -111,6 +111,8 @@ FunctionAST *Parser::visitFunctionDefinition(){
   }
 
   VariableTable.clear();
+  // body をパースする前に関数名を登録（再帰呼び出しを可能にする）
+  FunctionTable[proto->getName()] = proto->getParamNum();
   FunctionStmtAST *func_stmt = visitFunctionStatement(proto);
   if(func_stmt){
     FunctionTable[proto->getName()] = proto->getParamNum();

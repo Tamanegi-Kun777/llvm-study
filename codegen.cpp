@@ -310,8 +310,8 @@ llvm::Value *CodeGen::generateForStatement(ForStmtAST *for_stmt){
 llvm::Value *CodeGen::generateBinaryExprssion(BinaryExprAST *bin_expr){
   BaseAST *lhs = bin_expr->getLHS();
   BaseAST *rhs = bin_expr->getRHS();
-  llvm::Value *lhs_v;
-  llvm::Value *rhs_v;
+  llvm::Value *lhs_v = NULL;
+  llvm::Value *rhs_v = NULL;
 
   if(bin_expr->getOp() == "="){
     VariableAST *lhs_var = llvm::dyn_cast<VariableAST>(lhs);
@@ -321,6 +321,9 @@ llvm::Value *CodeGen::generateBinaryExprssion(BinaryExprAST *bin_expr){
   else{
     if(llvm::isa<BinaryExprAST>(lhs)){
       lhs_v = generateBinaryExprssion(llvm::dyn_cast<BinaryExprAST>(lhs));
+    }
+    else if(llvm::isa<CallExprAST>(lhs)){
+      lhs_v = generateCallExpression(llvm::dyn_cast<CallExprAST>(lhs));
     }
     else if(llvm::isa<VariableAST>(lhs)){
       lhs_v = generateVariable(llvm::dyn_cast<VariableAST>(lhs));
