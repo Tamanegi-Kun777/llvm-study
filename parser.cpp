@@ -273,10 +273,11 @@ PrototypeAST *Parser::visitPrototype(){
    DBG("[DEBUG] visitPrototype start\n");//追加
   int bkup = Tokens->getCurIndex();
 
-  // 戻り値の型 "int"
-  if(Tokens->getCurType() == TOK_INT){
-    Tokens->getNextToken();
-  }
+// 戻り値の型
+  std::string ret_type;
+  if(Tokens->getCurType() == TOK_INT){ ret_type = "int"; Tokens->getNextToken(); }
+  else if(Tokens->getCurType() == TOK_CHAR){ ret_type = "char"; Tokens->getNextToken(); }
+  else if(Tokens->getCurType() == TOK_DOUBLE){ ret_type = "double"; Tokens->getNextToken(); }
   else{
     return NULL;
   }
@@ -304,13 +305,15 @@ PrototypeAST *Parser::visitPrototype(){
   // Parameter_list
   bool is_first_param = true;
   std::vector<std::string> param_list;
+  std::vector<std::string> param_types;
   while(true){
     if(!is_first_param && Tokens->getCurType() == TOK_SYMBOL && Tokens->getCurString() == ","){
       Tokens->getNextToken();
     }
-    if(Tokens->getCurType() == TOK_INT){
-      Tokens->getNextToken();
-    }
+    std::string param_type;
+    if(Tokens->getCurType() == TOK_INT){ param_type = "int"; Tokens->getNextToken(); }
+    else if(Tokens->getCurType() == TOK_CHAR){ param_type = "char"; Tokens->getNextToken(); }
+    else if(Tokens->getCurType() == TOK_DOUBLE){ param_type = "double"; Tokens->getNextToken(); }
     else{
       break;
     }
@@ -322,6 +325,7 @@ PrototypeAST *Parser::visitPrototype(){
         return NULL;
       }
       param_list.push_back(Tokens->getCurString());
+      param_types.push_back(param_type);
       Tokens->getNextToken();
       is_first_param = false;
     }
@@ -334,7 +338,12 @@ PrototypeAST *Parser::visitPrototype(){
   // ")"
   if(Tokens->getCurType() == TOK_SYMBOL && Tokens->getCurString() == ")"){
     Tokens->getNextToken();
-    return new PrototypeAST(name, param_list);
+    PrototypeAST *proto = new PrototypeAST(name, param_list);
+    proto->setRetType(ret_type);
+    for(int i = 0; i < param_types.size(); i++){
+      proto->addParamType(param_types[i]);
+    }
+    return proto;
   }
   else{
     Tokens->applyTokenIndex(bkup);
@@ -355,7 +364,7 @@ FunctionStmtAST *Parser::visitFunctionStatement(PrototypeAST *proto){
   FunctionStmtAST *func_stmt = new FunctionStmtAST();
 
   for(int i = 0; i < proto->getParamNum(); i++){
-    VariableDeclAST *vdecl = new VariableDeclAST(proto->getParamName(i));
+    VariableDeclAST *vdecl = new VariableDeclAST(proto->getParamName(i), proto->getParamType(i));
     vdecl->setDeclType(VariableDeclAST::param);
     func_stmt->addVariableDeclaration(vdecl);
     VariableTable.push_back(vdecl->getName());

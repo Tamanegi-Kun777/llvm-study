@@ -134,8 +134,12 @@ llvm::Function *CodeGen::generatePrototype(PrototypeAST *proto, llvm::Module *mo
     }
   }
 
-  std::vector<llvm::Type*> int_types(proto->getParamNum(), llvm::Type::getInt32Ty(Context));
-  llvm::FunctionType *func_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(Context), int_types, false);
+  std::vector<llvm::Type*> param_types;
+  for(int i = 0; i < proto->getParamNum(); i++){
+    param_types.push_back(getLLVMType(proto->getParamType(i)));
+  }
+  llvm::Type *ret_type = getLLVMType(proto->getRetType());
+  llvm::FunctionType *func_type = llvm::FunctionType::get(ret_type, param_types, false);
   func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, proto->getName(), mod);
 
   llvm::Function::arg_iterator arg_iter = func->arg_begin();
@@ -552,6 +556,15 @@ llvm::Value *CodeGen::generateCallExpression(CallExprAST *call_expr){
     else if(llvm::isa<NumberAST>(arg)){
       NumberAST *num = llvm::dyn_cast<NumberAST>(arg);
       arg_v = generateNumber(num->getNumberValue());
+    }
+    else if(llvm::isa<FloatNumberAST>(arg)){
+      arg_v = generateFloatNumber(llvm::dyn_cast<FloatNumberAST>(arg)->getValue());
+    }
+    // 引数を関数の期待する型に変換
+    llvm::Function *callee = Mod->getFunction(call_expr->getCallee());
+    if(callee && i < (int)callee->arg_size()){
+      llvm::Type *param_type = callee->getFunctionType()->getParamType(i);
+      arg_v = convertType(arg_v, param_type);
     }
     arg_vec.push_back(arg_v);
   }

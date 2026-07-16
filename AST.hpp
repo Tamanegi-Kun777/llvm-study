@@ -444,10 +444,11 @@ class PrototypeAST
 {
   std::string Name;
   std::vector<std::string> Params;
-
+  std::string RetType;
+  std::vector<std::string> ParamTypes;
 public:
   PrototypeAST(const std::string &name, const std::vector<std::string> &params)
-    : Name(name), Params(params){};
+    : Name(name), Params(params), RetType("int"){};
 
   //関数名を取得する
   std::string getName(){return Name;};
@@ -464,6 +465,13 @@ public:
   ;
   //引数の数を取得する
   int getParamNum(){return Params.size();};
+  std::string getRetType(){return RetType;};
+  void setRetType(const std::string &t){RetType = t;};
+  std::string getParamType(int i){
+    if(i < ParamTypes.size()){ return ParamTypes.at(i); }
+    else{ return "int"; }
+  };
+  void addParamType(const std::string &t){ParamTypes.push_back(t);};
 };
 
 /*

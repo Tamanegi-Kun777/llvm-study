@@ -1,0 +1,9 @@
+double addone(double x){
+  return x + 1.0;
+}
+
+int main(){
+  double r;
+  r = addone(2.5);
+  return r;
+}
