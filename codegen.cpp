@@ -85,13 +85,32 @@ llvm::Type *CodeGen::getLLVMType(const std::string &type_name){
   if(type_name == "int"){
     return llvm::Type::getInt32Ty(Context);
   }
+  else if(type_name == "char"){
+    return llvm::Type::getInt8Ty(Context);
+  }
   else if(StructTypeTable.find(type_name) != StructTypeTable.end()){
     return StructTypeTable[type_name];
   }
   // 未知の型（フォールバックでint）
   return llvm::Type::getInt32Ty(Context);
 }
-
+llvm::Value *CodeGen::convertType(llvm::Value *value, llvm::Type *target_type){
+  llvm::Type *src_type = value->getType();
+  if(src_type == target_type){
+    return value;
+  }
+  if(src_type->isIntegerTy() && target_type->isIntegerTy()){
+    unsigned src_bits = src_type->getIntegerBitWidth();
+    unsigned tgt_bits = target_type->getIntegerBitWidth();
+    if(src_bits > tgt_bits){
+      return Builder->CreateTrunc(value, target_type, "trunc");
+    }
+    else{
+      return Builder->CreateSExt(value, target_type, "sext");
+    }
+  }
+  return value;
+}
 llvm::Function *CodeGen::generatePrototype(PrototypeAST *proto, llvm::Module *mod){
   llvm::Function *func = mod->getFunction(proto->getName());
   if(func){
@@ -433,8 +452,9 @@ llvm::Value *CodeGen::generateBinaryExprssion(BinaryExprAST *bin_expr){
     llvm::Value *addr = generateMemberAddress(llvm::dyn_cast<MemberAccessAST>(rhs));
     rhs_v = Builder->CreateLoad(llvm::Type::getInt32Ty(Context), addr, "member_tmp");
   }
-
   if(bin_expr->getOp() == "="){
+    llvm::Type *elem_type = lhs_v->getType()->getPointerElementType();
+    rhs_v = convertType(rhs_v, elem_type);
     return Builder->CreateStore(rhs_v, lhs_v);
   }
   else if(bin_expr->getOp() == "+"){
@@ -531,13 +551,15 @@ llvm::Value *CodeGen::generateJumpStatement(JumpStmtAST *jump_stmt){
           llvm::isa<BinaryExprAST>(expr), llvm::isa<VariableAST>(expr),
           llvm::isa<NumberAST>(expr), (void*)ret_v);
   
+  ret_v = convertType(ret_v, CurFunc->getReturnType());
   return Builder->CreateRet(ret_v);
 }
 
 llvm::Value *CodeGen::generateVariable(VariableAST *var){
   llvm::ValueSymbolTable *vs_table = CurFunc->getValueSymbolTable();
   llvm::Value *ptr = vs_table->lookup(var->getName());
-  return Builder->CreateLoad(llvm::Type::getInt32Ty(Context), ptr, "var_tmp");
+  llvm::Type *var_type = getLLVMType(VariableTypeTable[var->getName()]);
+  return Builder->CreateLoad(var_type, ptr, "var_tmp");
 }
 llvm::Value *CodeGen::generateMemberAddress(MemberAccessAST *member){
   llvm::Value *base_ptr;

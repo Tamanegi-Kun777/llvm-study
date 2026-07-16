@@ -48,6 +48,7 @@ private:
   llvm::Function *generatePrototype(PrototypeAST *proto, llvm::Module *mod);
   llvm::Value *generateFunctionStatement(FunctionStmtAST *func_stmt);
   llvm::Type *getLLVMType(const std::string &type_name);
+  llvm::Value *convertType(llvm::Value *value, llvm::Type *target_type);
   llvm::Value *generateMemberAddress(MemberAccessAST *member);
   void registerStruct(StructDeclAST *struct_decl);
   void generateMethod(const std::string &struct_name, FunctionAST *method);

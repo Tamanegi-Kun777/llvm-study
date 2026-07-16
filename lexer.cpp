@@ -74,6 +74,9 @@ TokenStream *LexicalAnalysis(std::string input_filename){
         else if(token_str == "class"){
           next_token = new Token(token_str, TOK_CLASS, line_num);
         }
+        else if(token_str == "char"){
+          next_token = new Token(token_str, TOK_CHAR, line_num);
+        }
         else{
           next_token = new Token(token_str, TOK_IDENTIFIER, line_num);
         }

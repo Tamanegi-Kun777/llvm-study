@@ -110,9 +110,9 @@ StructDeclAST *Parser::visitStructDeclaration(){
       struct_decl->addMethod(method);
       continue;
     }
-    // メンバ変数(int 名前 ;)を試す
-    if(Tokens->getCurType() == TOK_INT){
-      std::string member_type = "int";
+    // メンバ変数(int/char 名前 ;)を試す
+    if(Tokens->getCurType() == TOK_INT || Tokens->getCurType() == TOK_CHAR){
+      std::string member_type = (Tokens->getCurType() == TOK_INT) ? "int" : "char";
       Tokens->getNextToken();
       std::string member_name;
       if(Tokens->getCurType() == TOK_IDENTIFIER){
@@ -938,6 +938,10 @@ VariableDeclAST *Parser::visitVariableDeclaration(){
   // 型: int または 登録済みの構造体名
   if(Tokens->getCurType() == TOK_INT){
     type_name = "int";
+    Tokens->getNextToken();
+  }
+  else if(Tokens->getCurType() == TOK_CHAR){
+    type_name = "char";
     Tokens->getNextToken();
   }
   else if(Tokens->getCurType() == TOK_IDENTIFIER &&
