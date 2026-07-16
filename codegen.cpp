@@ -469,21 +469,31 @@ llvm::Value *CodeGen::generateBinaryExprssion(BinaryExprAST *bin_expr){
     llvm::Value *addr = generateMemberAddress(llvm::dyn_cast<MemberAccessAST>(rhs));
     rhs_v = Builder->CreateLoad(llvm::Type::getInt32Ty(Context), addr, "member_tmp");
   }
+  // double が絡む演算のため型を揃える（代入以外で使う）
+  bool is_float = (lhs_v && lhs_v->getType()->isDoubleTy()) || (rhs_v && rhs_v->getType()->isDoubleTy());
+  if(is_float && bin_expr->getOp() != "="){
+    if(lhs_v) lhs_v = convertType(lhs_v, llvm::Type::getDoubleTy(Context));
+    if(rhs_v) rhs_v = convertType(rhs_v, llvm::Type::getDoubleTy(Context));
+  }
   if(bin_expr->getOp() == "="){
     llvm::Type *elem_type = lhs_v->getType()->getPointerElementType();
     rhs_v = convertType(rhs_v, elem_type);
     return Builder->CreateStore(rhs_v, lhs_v);
   }
   else if(bin_expr->getOp() == "+"){
+    if(is_float) return Builder->CreateFAdd(lhs_v, rhs_v, "add_tmp");
     return Builder->CreateAdd(lhs_v, rhs_v, "add_tmp");
   }
   else if(bin_expr->getOp() == "-"){
+    if(is_float) return Builder->CreateFSub(lhs_v, rhs_v, "sub_tmp");
     return Builder->CreateSub(lhs_v, rhs_v, "sub_tmp");
   }
   else if(bin_expr->getOp() == "*"){
+    if(is_float) return Builder->CreateFMul(lhs_v, rhs_v, "mul_tmp");
     return Builder->CreateMul(lhs_v, rhs_v, "mul_tmp");
   }
   else if(bin_expr->getOp() == "/"){
+    if(is_float) return Builder->CreateFDiv(lhs_v, rhs_v, "div_tmp");
     return Builder->CreateSDiv(lhs_v, rhs_v, "div_tmp");
   }
   else if(bin_expr->getOp() == "<"){
