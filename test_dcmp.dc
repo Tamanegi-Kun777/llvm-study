@@ -1,0 +1,8 @@
+int main(){
+  double d;
+  d = 3.5;
+  if(d > 3.0){
+    return 1;
+  }
+  return 0;
+}

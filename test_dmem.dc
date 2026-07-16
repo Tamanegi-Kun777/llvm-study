@@ -1,0 +1,9 @@
+class P {
+  double x;
+}
+
+int main(){
+  P p;
+  p.x = 3.5;
+  return p.x;
+}

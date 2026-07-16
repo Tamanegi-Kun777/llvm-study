@@ -1,0 +1,11 @@
+class Point {
+  int x;
+}
+
+using P = Point;
+
+int main(){
+  P p;
+  p.x = 7;
+  return p.x;
+}

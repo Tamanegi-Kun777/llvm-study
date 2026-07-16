@@ -445,7 +445,7 @@ llvm::Value *CodeGen::generateBinaryExprssion(BinaryExprAST *bin_expr){
     }
     else if(llvm::isa<MemberAccessAST>(lhs)){
       llvm::Value *addr = generateMemberAddress(llvm::dyn_cast<MemberAccessAST>(lhs));
-      lhs_v = Builder->CreateLoad(llvm::Type::getInt32Ty(Context), addr, "member_tmp");
+      lhs_v = Builder->CreateLoad(addr->getType()->getPointerElementType(), addr, "member_tmp");
     }
   }
 
@@ -467,7 +467,7 @@ llvm::Value *CodeGen::generateBinaryExprssion(BinaryExprAST *bin_expr){
   }
   else if(llvm::isa<MemberAccessAST>(rhs)){
     llvm::Value *addr = generateMemberAddress(llvm::dyn_cast<MemberAccessAST>(rhs));
-    rhs_v = Builder->CreateLoad(llvm::Type::getInt32Ty(Context), addr, "member_tmp");
+    rhs_v = Builder->CreateLoad(addr->getType()->getPointerElementType(), addr, "member_tmp");
   }
   // double が絡む演算のため型を揃える（代入以外で使う）
   bool is_float = (lhs_v && lhs_v->getType()->isDoubleTy()) || (rhs_v && rhs_v->getType()->isDoubleTy());
@@ -497,21 +497,27 @@ llvm::Value *CodeGen::generateBinaryExprssion(BinaryExprAST *bin_expr){
     return Builder->CreateSDiv(lhs_v, rhs_v, "div_tmp");
   }
   else if(bin_expr->getOp() == "<"){
+    if(is_float) return Builder->CreateFCmpOLT(lhs_v, rhs_v, "cmp_tmp");
     return Builder->CreateICmpSLT(lhs_v, rhs_v, "cmp_tmp");
   }
   else if(bin_expr->getOp() == ">"){
+    if(is_float) return Builder->CreateFCmpOGT(lhs_v, rhs_v, "cmp_tmp");
     return Builder->CreateICmpSGT(lhs_v, rhs_v, "cmp_tmp");
   }
   else if(bin_expr->getOp() == "<="){
+    if(is_float) return Builder->CreateFCmpOLE(lhs_v, rhs_v, "cmp_tmp");
     return Builder->CreateICmpSLE(lhs_v, rhs_v, "cmp_tmp");
   }
   else if(bin_expr->getOp() == ">="){
+    if(is_float) return Builder->CreateFCmpOGE(lhs_v, rhs_v, "cmp_tmp");
     return Builder->CreateICmpSGE(lhs_v, rhs_v, "cmp_tmp");
   }
   else if(bin_expr->getOp() == "=="){
+    if(is_float) return Builder->CreateFCmpOEQ(lhs_v, rhs_v, "cmp_tmp");
     return Builder->CreateICmpEQ(lhs_v, rhs_v, "cmp_tmp");
   }
   else if(bin_expr->getOp() == "!="){
+    if(is_float) return Builder->CreateFCmpONE(lhs_v, rhs_v, "cmp_tmp");
     return Builder->CreateICmpNE(lhs_v, rhs_v, "cmp_tmp");
   }
   return NULL;
@@ -572,7 +578,7 @@ llvm::Value *CodeGen::generateJumpStatement(JumpStmtAST *jump_stmt){
   }
   else if(llvm::isa<MemberAccessAST>(expr)){
     llvm::Value *addr = generateMemberAddress(llvm::dyn_cast<MemberAccessAST>(expr));
-    ret_v = Builder->CreateLoad(llvm::Type::getInt32Ty(Context), addr, "member_tmp");
+    ret_v = Builder->CreateLoad(addr->getType()->getPointerElementType(), addr, "member_tmp");
   }
   DBG("[CG] JumpStmt: exprType binary=%d var=%d num=%d, ret_v=%p\n",
           llvm::isa<BinaryExprAST>(expr), llvm::isa<VariableAST>(expr),
