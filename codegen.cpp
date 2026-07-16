@@ -370,6 +370,10 @@ llvm::Value *CodeGen::generateBinaryExprssion(BinaryExprAST *bin_expr){
       NumberAST *num = llvm::dyn_cast<NumberAST>(lhs);
       lhs_v = generateNumber(num->getNumberValue());
     }
+    else if(llvm::isa<MemberAccessAST>(lhs)){
+      llvm::Value *addr = generateMemberAddress(llvm::dyn_cast<MemberAccessAST>(lhs));
+      lhs_v = Builder->CreateLoad(llvm::Type::getInt32Ty(Context), addr, "member_tmp");
+    }
   }
 
   if(llvm::isa<BinaryExprAST>(rhs)){
@@ -385,7 +389,11 @@ llvm::Value *CodeGen::generateBinaryExprssion(BinaryExprAST *bin_expr){
     NumberAST *num = llvm::dyn_cast<NumberAST>(rhs);
     rhs_v = generateNumber(num->getNumberValue());
   }
-
+  else if(llvm::isa<MemberAccessAST>(rhs)){
+    llvm::Value *addr = generateMemberAddress(llvm::dyn_cast<MemberAccessAST>(rhs));
+    rhs_v = Builder->CreateLoad(llvm::Type::getInt32Ty(Context), addr, "member_tmp");
+  }
+  
   if(bin_expr->getOp() == "="){
     return Builder->CreateStore(rhs_v, lhs_v);
   }
