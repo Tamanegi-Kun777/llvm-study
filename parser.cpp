@@ -52,6 +52,7 @@ bool Parser::visitTranslationUnit(){
 bool Parser::visitExternalDeclaration(TranslationUnitAST *tunit){
   StructDeclAST *struct_decl = visitStructDeclaration();
   if(struct_decl){
+    tunit->addStruct(struct_decl);
     return true;
   }
   PrototypeAST *proto = visitFunctionDeclaration();

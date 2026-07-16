@@ -26,7 +26,14 @@ llvm::Module &CodeGen::getModule(){
 
 bool CodeGen::generateTranslationUnit(TranslationUnitAST &tunit, std::string name){
   Mod = new llvm::Module (name, Context);
-
+  // 構造体定義を先に処理してLLVMのStructTypeを作る
+  for(int i = 0; ; i++){
+    StructDeclAST *sdecl = tunit.getStruct(i);
+    if(!sdecl){
+      break;
+    }
+    registerStruct(sdecl);
+  }
   for(int i = 0; ; i++){
     PrototypeAST *proto = tunit.getPrototype(i);
     if(!proto){
@@ -49,6 +56,30 @@ bool CodeGen::generateTranslationUnit(TranslationUnitAST &tunit, std::string nam
     }
   }
   return true;
+}
+void CodeGen::registerStruct(StructDeclAST *struct_decl){
+  // メンバの型を集める
+  std::vector<llvm::Type*> member_types;
+  for(int i = 0; i < struct_decl->getMemberNum(); i++){
+    llvm::Type *member_type = getLLVMType(struct_decl->getMemberType(i));
+    member_types.push_back(member_type);
+  }
+  // LLVMのStructTypeを作る（名前付き）
+  llvm::StructType *struct_type = llvm::StructType::create(Context, member_types, struct_decl->getName());
+  // 2つの表に登録
+  StructTypeTable[struct_decl->getName()] = struct_type;
+  StructInfoTable[struct_decl->getName()] = struct_decl;
+}
+
+llvm::Type *CodeGen::getLLVMType(const std::string &type_name){
+  if(type_name == "int"){
+    return llvm::Type::getInt32Ty(Context);
+  }
+  else if(StructTypeTable.find(type_name) != StructTypeTable.end()){
+    return StructTypeTable[type_name];
+  }
+  // 未知の型（フォールバックでint）
+  return llvm::Type::getInt32Ty(Context);
 }
 
 llvm::Function *CodeGen::generatePrototype(PrototypeAST *proto, llvm::Module *mod){
@@ -115,7 +146,9 @@ llvm::Value *CodeGen::generateFunctionStatement(FunctionStmtAST *func_stmt){
 }
 
 llvm::Value *CodeGen::generateVariableDeclaration(VariableDeclAST *vdecl){
-  llvm::AllocaInst *alloca = Builder->CreateAlloca(llvm::Type::getInt32Ty(Context), 0, vdecl->getName());
+  llvm::Type *var_type = getLLVMType(vdecl->getTypeName());
+  llvm::AllocaInst *alloca = Builder->CreateAlloca(var_type, 0, vdecl->getName());
+  VariableTypeTable[vdecl->getName()] = vdecl->getTypeName();
   if(vdecl->getType() == VariableDeclAST::param){
     llvm::ValueSymbolTable *vs_table = CurFunc->getValueSymbolTable();
     Builder->CreateStore(vs_table->lookup(vdecl->getName().append("_arg")), alloca);
@@ -314,9 +347,14 @@ llvm::Value *CodeGen::generateBinaryExprssion(BinaryExprAST *bin_expr){
   llvm::Value *rhs_v = NULL;
 
   if(bin_expr->getOp() == "="){
-    VariableAST *lhs_var = llvm::dyn_cast<VariableAST>(lhs);
-    llvm::ValueSymbolTable *vs_table = CurFunc->getValueSymbolTable();
-    lhs_v = vs_table->lookup(lhs_var->getName());
+    if(llvm::isa<MemberAccessAST>(lhs)){
+      lhs_v = generateMemberAddress(llvm::dyn_cast<MemberAccessAST>(lhs));
+    }
+    else{
+      VariableAST *lhs_var = llvm::dyn_cast<VariableAST>(lhs);
+      llvm::ValueSymbolTable *vs_table = CurFunc->getValueSymbolTable();
+      lhs_v = vs_table->lookup(lhs_var->getName());
+    }
   }
   else{
     if(llvm::isa<BinaryExprAST>(lhs)){
@@ -437,6 +475,10 @@ llvm::Value *CodeGen::generateJumpStatement(JumpStmtAST *jump_stmt){
   else if(llvm::isa<CallExprAST>(expr)){
     ret_v = generateCallExpression(llvm::dyn_cast<CallExprAST>(expr));
   }
+  else if(llvm::isa<MemberAccessAST>(expr)){
+    llvm::Value *addr = generateMemberAddress(llvm::dyn_cast<MemberAccessAST>(expr));
+    ret_v = Builder->CreateLoad(llvm::Type::getInt32Ty(Context), addr, "member_tmp");
+  }
   DBG("[CG] JumpStmt: exprType binary=%d var=%d num=%d, ret_v=%p\n",
           llvm::isa<BinaryExprAST>(expr), llvm::isa<VariableAST>(expr),
           llvm::isa<NumberAST>(expr), (void*)ret_v);
@@ -449,7 +491,33 @@ llvm::Value *CodeGen::generateVariable(VariableAST *var){
   llvm::Value *ptr = vs_table->lookup(var->getName());
   return Builder->CreateLoad(llvm::Type::getInt32Ty(Context), ptr, "var_tmp");
 }
+llvm::Value *CodeGen::generateMemberAddress(MemberAccessAST *member){
+  // 変数 p のアドレスを得る
+  llvm::ValueSymbolTable *vs_table = CurFunc->getValueSymbolTable();
+  llvm::Value *base_ptr = vs_table->lookup(member->getVariableName());
 
+  // 変数 p の型名を得る（例: "Point"）
+  std::string type_name = VariableTypeTable[member->getVariableName()];
+
+  // その構造体の情報を得る
+  StructDeclAST *struct_decl = StructInfoTable[type_name];
+  llvm::StructType *struct_type = StructTypeTable[type_name];
+
+  // メンバ x が何番目かを探す
+  int member_index = -1;
+  for(int i = 0; i < struct_decl->getMemberNum(); i++){
+    if(struct_decl->getMemberName(i) == member->getMemberName()){
+      member_index = i;
+      break;
+    }
+  }
+  if(member_index < 0){
+    return NULL;
+  }
+
+  // getelementptr で「p の member_index 番目のフィールド」のアドレスを計算
+  return Builder->CreateStructGEP(struct_type, base_ptr, member_index, "member_ptr");
+}
 llvm::Value *CodeGen::generateNumber(int value){
   return llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), value);
 }

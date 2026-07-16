@@ -86,7 +86,7 @@ public:
   // 変数名を取得する
   std::string getName(){return Name;};
   std::string getTypeName(){return TypeName;};
-  
+
   // 変数の宣言種別を設定する
   bool setDeclType(DeclType type){
     Type = type;
@@ -366,6 +366,7 @@ class TranslationUnitAST
 {
   std::vector<PrototypeAST*> Prototypes;
   std::vector<FunctionAST*> Functions;
+  std::vector<StructDeclAST*> Structs;
 
 public:
   TranslationUnitAST(){};
@@ -376,7 +377,8 @@ public:
 
   //モジュールに関数を追加する
   bool addFunction(FunctionAST *func);
-
+  //モジュールに構造体定義を追加する
+  bool addStruct(StructDeclAST *s){Structs.push_back(s); return true;}
   //モジュールが空か判定する
   bool empty();
 
@@ -394,6 +396,15 @@ public:
   FunctionAST *getFunction(int i){
     if(i < Functions.size()){
       return Functions.at(i);
+    }
+    else{
+      return NULL;
+    }
+  }
+  //i番目の構造体定義を取得する
+  StructDeclAST *getStruct(int i){
+    if(i < Structs.size()){
+      return Structs.at(i);
     }
     else{
       return NULL;

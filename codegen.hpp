@@ -30,6 +30,9 @@ private:
   llvm::Function *CurFunc;
   llvm::Module  *Mod;
   llvm::IRBuilder<> *Builder;
+  std::map<std::string, llvm::StructType*> StructTypeTable;
+  std::map<std::string, StructDeclAST*> StructInfoTable;
+  std::map<std::string, std::string> VariableTypeTable;
 
 public:
   CodeGen();
@@ -42,6 +45,9 @@ private:
   llvm::Function *generateFunctionDefinition(FunctionAST *func, llvm::Module *mod);
   llvm::Function *generatePrototype(PrototypeAST *proto, llvm::Module *mod);
   llvm::Value *generateFunctionStatement(FunctionStmtAST *func_stmt);
+  llvm::Type *getLLVMType(const std::string &type_name);
+  llvm::Value *generateMemberAddress(MemberAccessAST *member);
+  void registerStruct(StructDeclAST *struct_decl);
   llvm::Value *generateVariableDeclaration(VariableDeclAST *vdecl);
   llvm::Value *generateStatement(BaseAST *stmt);
   llvm::Value *generateIfStatement(IfStmtAST *if_stmt);
