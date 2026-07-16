@@ -269,6 +269,7 @@ class StructDeclAST : public BaseAST
   std::string Name;
   std::vector<std::string> MemberNames;
   std::vector<std::string> MemberTypes;
+  std::vector<FunctionAST*> Methods;
 public:
   StructDeclAST(const std::string &name) : BaseAST(StructDeclID), Name(name){};
   ~StructDeclAST(){};
@@ -291,6 +292,12 @@ public:
     if(i < MemberTypes.size()){ return MemberTypes.at(i); }
     else{ return ""; }
   };
+  bool addMethod(FunctionAST *method){Methods.push_back(method); return true;};
+  int getMethodNum(){return Methods.size();};
+  FunctionAST *getMethod(int i){
+    if(i < Methods.size()){ return Methods.at(i); }
+    else{ return NULL; }
+  };
 };
 /*
  *  メンバアクセス(p.x)を表すAST
@@ -299,9 +306,10 @@ class MemberAccessAST : public BaseAST
 {
   std::string VariableName;
   std::string MemberName;
+  bool IsCall;
 public:
-  MemberAccessAST(const std::string &var_name, const std::string &member_name)
-    : BaseAST(MemberAccessID), VariableName(var_name), MemberName(member_name){};
+   MemberAccessAST(const std::string &var_name, const std::string &member_name, bool is_call = false)
+    : BaseAST(MemberAccessID), VariableName(var_name), MemberName(member_name), IsCall(is_call){};
   ~MemberAccessAST(){};
   static inline bool classof(MemberAccessAST const*){return true;};
   static inline bool classof(BaseAST const* base){
@@ -309,6 +317,7 @@ public:
   };
   std::string getVariableName(){return VariableName;};
   std::string getMemberName(){return MemberName;};
+  bool getIsCall(){return IsCall;};
 };
 /*
  *  変数参照を表すAST

@@ -100,36 +100,44 @@ StructDeclAST *Parser::visitStructDeclaration(){
   }
 
   StructDeclAST *struct_decl = new StructDeclAST(struct_name);
-
-  // メンバの並び: 型 メンバ名 ;
-  while(Tokens->getCurType() == TOK_INT){
-    // 型(今はintのみ)
-    std::string member_type = "int";
-    Tokens->getNextToken();
-
-    // メンバ名
-    std::string member_name;
-    if(Tokens->getCurType() == TOK_IDENTIFIER){
-      member_name = Tokens->getCurString();
+  CurrentStructName = struct_name;
+  CurrentStructMembers.clear();
+// メンバ変数とメソッドの並び
+  while(true){
+    // まずメソッド(関数定義)を試す
+    FunctionAST *method = visitFunctionDefinition();
+    if(method){
+      struct_decl->addMethod(method);
+      continue;
+    }
+    // メンバ変数(int 名前 ;)を試す
+    if(Tokens->getCurType() == TOK_INT){
+      std::string member_type = "int";
       Tokens->getNextToken();
+      std::string member_name;
+      if(Tokens->getCurType() == TOK_IDENTIFIER){
+        member_name = Tokens->getCurString();
+        Tokens->getNextToken();
+      }
+      else{
+        SAFE_DELETE(struct_decl);
+        Tokens->applyTokenIndex(bkup);
+        return NULL;
+      }
+      if(Tokens->getCurType() == TOK_SYMBOL && Tokens->getCurString() == ";"){
+        Tokens->getNextToken();
+      }
+      else{
+        SAFE_DELETE(struct_decl);
+        Tokens->applyTokenIndex(bkup);
+        return NULL;
+      }
+      struct_decl->addMember(member_name, member_type);
+      CurrentStructMembers.push_back(member_name);
     }
     else{
-      SAFE_DELETE(struct_decl);
-      Tokens->applyTokenIndex(bkup);
-      return NULL;
+      break;
     }
-
-    // ";"
-    if(Tokens->getCurType() == TOK_SYMBOL && Tokens->getCurString() == ";"){
-      Tokens->getNextToken();
-    }
-    else{
-      SAFE_DELETE(struct_decl);
-      Tokens->applyTokenIndex(bkup);
-      return NULL;
-    }
-
-    struct_decl->addMember(member_name, member_type);
   }
   // "}"
   if(Tokens->getCurType() == TOK_SYMBOL && Tokens->getCurString() == "}"){
@@ -143,7 +151,8 @@ StructDeclAST *Parser::visitStructDeclaration(){
 
   // StructTableに登録
   StructTable[struct_name] = struct_decl;
-
+  CurrentStructName = "";
+  CurrentStructMembers.clear();
   return struct_decl;
 }
 PrototypeAST *Parser::visitFunctionDeclaration(){
@@ -376,8 +385,26 @@ BaseAST *Parser::visitAssignmentExpression(){
         Tokens->applyTokenIndex(bkup);
       }
     }
-    else{
-      Tokens->applyTokenIndex(bkup);
+    else if(std::find(CurrentStructMembers.begin(), CurrentStructMembers.end(), Tokens->getCurString()) != CurrentStructMembers.end()){
+      // 新規: メンバ変数を this.メンバ の左辺にする（value = ...）
+      std::string member_name = Tokens->getCurString();
+      Tokens->getNextToken();
+      lhs = new MemberAccessAST("this", member_name);
+      BaseAST *rhs;
+      if(Tokens->getCurType() == TOK_SYMBOL && Tokens->getCurString() == "="){
+        Tokens->getNextToken();
+        if((rhs = visitRelationalExpression())){
+          return new BinaryExprAST("=", lhs, rhs);
+        }
+        else{
+          SAFE_DELETE(lhs);
+          Tokens->applyTokenIndex(bkup);
+        }
+      }
+      else{
+        SAFE_DELETE(lhs);
+        Tokens->applyTokenIndex(bkup);
+      }
     }
   }
   BaseAST *add_expr = visitRelationalExpression();
@@ -404,6 +431,18 @@ BaseAST *Parser::visitPrimaryExpression(){
       if(Tokens->getCurType() == TOK_IDENTIFIER){
         std::string member_name = Tokens->getCurString();
         Tokens->getNextToken();
+        // 次が "(" ならメソッド呼び出し
+        if(Tokens->getCurType() == TOK_SYMBOL && Tokens->getCurString() == "("){
+          Tokens->getNextToken();
+          if(Tokens->getCurType() == TOK_SYMBOL && Tokens->getCurString() == ")"){
+            Tokens->getNextToken();
+            return new MemberAccessAST(var_name, member_name, true);
+          }
+          else{
+            Tokens->applyTokenIndex(bkup);
+            return NULL;
+          }
+        }
         return new MemberAccessAST(var_name, member_name);
       }
       else{
@@ -412,6 +451,13 @@ BaseAST *Parser::visitPrimaryExpression(){
       }
     }
     return new VariableAST(var_name);
+  }
+  else if(Tokens->getCurType() == TOK_IDENTIFIER &&
+    (std::find(CurrentStructMembers.begin(), CurrentStructMembers.end(), Tokens->getCurString()) != CurrentStructMembers.end())){
+    // メソッド内でメンバ変数を参照（value → this.value）
+    std::string member_name = Tokens->getCurString();
+    Tokens->getNextToken();
+    return new MemberAccessAST("this", member_name);
   }
   else if(Tokens->getCurType() == TOK_DIGIT){
     int val = Tokens->getCurNumVal();

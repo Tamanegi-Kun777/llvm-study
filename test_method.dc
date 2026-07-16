@@ -1,0 +1,15 @@
+class Counter {
+  int value;
+  int increment() {
+    value = value + 1;
+    return value;
+  }
+}
+
+int main(){
+  Counter c;
+  c.value = 0;
+  c.increment();
+  return c.value;
+}
+

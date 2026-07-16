@@ -24,7 +24,9 @@ private:
   std::map<std::string, int> PrototypeTable;
   std::map<std::string, int> FunctionTable;
   std::map<std::string, StructDeclAST*> StructTable;
-  
+  std::vector<std::string> CurrentStructMembers;
+  std::string CurrentStructName;
+ 
 public:
   Parser(std::string filename);
   ~Parser(){

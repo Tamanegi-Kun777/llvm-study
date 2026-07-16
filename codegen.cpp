@@ -34,6 +34,16 @@ bool CodeGen::generateTranslationUnit(TranslationUnitAST &tunit, std::string nam
     }
     registerStruct(sdecl);
   }
+  // 構造体のメソッドを生成
+  for(int i = 0; ; i++){
+    StructDeclAST *sdecl = tunit.getStruct(i);
+    if(!sdecl){
+      break;
+    }
+    for(int j = 0; j < sdecl->getMethodNum(); j++){
+      generateMethod(sdecl->getName(), sdecl->getMethod(j));
+    }
+  }
   for(int i = 0; ; i++){
     PrototypeAST *proto = tunit.getPrototype(i);
     if(!proto){
@@ -119,7 +129,34 @@ llvm::Function *CodeGen::generateFunctionDefinition(FunctionAST *func_ast, llvm:
 
   return func;
 }
+void CodeGen::generateMethod(const std::string &struct_name, FunctionAST *method){
+  PrototypeAST *proto = method->getPrototype();
+  std::string method_name = struct_name + "_" + proto->getName();
 
+  // this の型: 構造体へのポインタ
+  llvm::StructType *struct_type = StructTypeTable[struct_name];
+  llvm::PointerType *this_type = llvm::PointerType::get(struct_type, 0);
+
+  // 関数型: int メソッド名(構造体* this)
+  std::vector<llvm::Type*> arg_types;
+  arg_types.push_back(this_type);
+  llvm::FunctionType *func_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(Context), arg_types, false);
+  llvm::Function *func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, method_name, Mod);
+
+  // 第1引数を "this" と名付ける
+  llvm::Function::arg_iterator arg_it = func->arg_begin();
+  arg_it->setName("this");
+
+  CurFunc = func;
+  CurrentThis = arg_it;   // メンバ解決用に保持
+  CurrentStructName = struct_name;
+  llvm::BasicBlock *bblock = llvm::BasicBlock::Create(Context, "entry", func);
+  Builder->SetInsertPoint(bblock);
+  generateFunctionStatement(method->getBody());
+
+  CurrentThis = NULL;
+  CurrentStructName = "";
+}
 llvm::Value *CodeGen::generateFunctionStatement(FunctionStmtAST *func_stmt){
   VariableDeclAST *vdecl;
   llvm::Value *v = NULL;
@@ -174,6 +211,9 @@ llvm::Value *CodeGen::generateStatement(BaseAST *stmt){
   }
   else if(llvm::isa<ForStmtAST>(stmt)){
     return generateForStatement(llvm::dyn_cast<ForStmtAST>(stmt));
+  }
+  else if(llvm::isa<MemberAccessAST>(stmt)){
+    return generateMethodCall(llvm::dyn_cast<MemberAccessAST>(stmt));
   }
   else{
     return NULL;
@@ -393,7 +433,7 @@ llvm::Value *CodeGen::generateBinaryExprssion(BinaryExprAST *bin_expr){
     llvm::Value *addr = generateMemberAddress(llvm::dyn_cast<MemberAccessAST>(rhs));
     rhs_v = Builder->CreateLoad(llvm::Type::getInt32Ty(Context), addr, "member_tmp");
   }
-  
+
   if(bin_expr->getOp() == "="){
     return Builder->CreateStore(rhs_v, lhs_v);
   }
@@ -500,12 +540,19 @@ llvm::Value *CodeGen::generateVariable(VariableAST *var){
   return Builder->CreateLoad(llvm::Type::getInt32Ty(Context), ptr, "var_tmp");
 }
 llvm::Value *CodeGen::generateMemberAddress(MemberAccessAST *member){
-  // 変数 p のアドレスを得る
-  llvm::ValueSymbolTable *vs_table = CurFunc->getValueSymbolTable();
-  llvm::Value *base_ptr = vs_table->lookup(member->getVariableName());
-
-  // 変数 p の型名を得る（例: "Point"）
-  std::string type_name = VariableTypeTable[member->getVariableName()];
+  llvm::Value *base_ptr;
+  std::string type_name;
+  if(member->getVariableName() == "this"){
+    // メソッド内: this は第1引数、型は現在の構造体
+    base_ptr = CurrentThis;
+    type_name = CurrentStructName;
+  }
+  else{
+    // 通常の変数 p
+    llvm::ValueSymbolTable *vs_table = CurFunc->getValueSymbolTable();
+    base_ptr = vs_table->lookup(member->getVariableName());
+    type_name = VariableTypeTable[member->getVariableName()];
+  }
 
   // その構造体の情報を得る
   StructDeclAST *struct_decl = StructInfoTable[type_name];
@@ -525,6 +572,16 @@ llvm::Value *CodeGen::generateMemberAddress(MemberAccessAST *member){
 
   // getelementptr で「p の member_index 番目のフィールド」のアドレスを計算
   return Builder->CreateStructGEP(struct_type, base_ptr, member_index, "member_ptr");
+}
+llvm::Value *CodeGen::generateMethodCall(MemberAccessAST *member){
+  llvm::ValueSymbolTable *vs_table = CurFunc->getValueSymbolTable();
+  llvm::Value *this_ptr = vs_table->lookup(member->getVariableName());
+  std::string type_name = VariableTypeTable[member->getVariableName()];
+  std::string method_name = type_name + "_" + member->getMemberName();
+  llvm::Function *method = Mod->getFunction(method_name);
+  std::vector<llvm::Value*> args;
+  args.push_back(this_ptr);
+  return Builder->CreateCall(method, args, "method_call");
 }
 llvm::Value *CodeGen::generateNumber(int value){
   return llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), value);

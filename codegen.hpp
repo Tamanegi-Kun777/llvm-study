@@ -28,6 +28,8 @@ class CodeGen
 private:
   llvm::LLVMContext Context;
   llvm::Function *CurFunc;
+  llvm::Value *CurrentThis;
+  std::string CurrentStructName;
   llvm::Module  *Mod;
   llvm::IRBuilder<> *Builder;
   std::map<std::string, llvm::StructType*> StructTypeTable;
@@ -48,6 +50,8 @@ private:
   llvm::Type *getLLVMType(const std::string &type_name);
   llvm::Value *generateMemberAddress(MemberAccessAST *member);
   void registerStruct(StructDeclAST *struct_decl);
+  void generateMethod(const std::string &struct_name, FunctionAST *method);
+  llvm::Value *generateMethodCall(MemberAccessAST *member);
   llvm::Value *generateVariableDeclaration(VariableDeclAST *vdecl);
   llvm::Value *generateStatement(BaseAST *stmt);
   llvm::Value *generateIfStatement(IfStmtAST *if_stmt);
