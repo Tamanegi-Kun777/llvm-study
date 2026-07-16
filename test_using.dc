@@ -1,0 +1,8 @@
+using C = int;
+
+int main(){
+  C x;
+  x = 42;
+  return x;
+}
+

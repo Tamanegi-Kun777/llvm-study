@@ -24,6 +24,7 @@ enum TokenType
   TOK_CHAR,
   TOK_FLOAT,
   TOK_DOUBLE,
+  TOK_USING,
   TOK_EOF
 };
 

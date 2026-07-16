@@ -24,6 +24,7 @@ private:
   std::map<std::string, int> PrototypeTable;
   std::map<std::string, int> FunctionTable;
   std::map<std::string, StructDeclAST*> StructTable;
+  std::map<std::string, std::string> TypeAliasTable;
   std::vector<std::string> CurrentStructMembers;
   std::string CurrentStructName;
  
@@ -43,6 +44,7 @@ private:
   bool visitTranslationUnit();
   bool visitExternalDeclaration(TranslationUnitAST *tunit);
   StructDeclAST *visitStructDeclaration();
+  bool visitUsingDeclaration();
   PrototypeAST *visitFunctionDeclaration();
   FunctionAST *visitFunctionDefinition();
   PrototypeAST *visitPrototype();

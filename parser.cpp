@@ -50,6 +50,10 @@ bool Parser::visitTranslationUnit(){
 
 // ExternalDeclaration用構文解析メソッド
 bool Parser::visitExternalDeclaration(TranslationUnitAST *tunit){
+  // using 宣言を試す
+  if(visitUsingDeclaration()){
+    return true;
+  }
   StructDeclAST *struct_decl = visitStructDeclaration();
   if(struct_decl){
     tunit->addStruct(struct_decl);
@@ -154,6 +158,57 @@ StructDeclAST *Parser::visitStructDeclaration(){
   CurrentStructName = "";
   CurrentStructMembers.clear();
   return struct_decl;
+}
+bool Parser::visitUsingDeclaration(){
+  int bkup = Tokens->getCurIndex();
+  // "using"
+  if(Tokens->getCurType() != TOK_USING){
+    return false;
+  }
+  Tokens->getNextToken();
+  // 別名（識別子）
+  std::string alias_name;
+  if(Tokens->getCurType() == TOK_IDENTIFIER){
+    alias_name = Tokens->getCurString();
+    Tokens->getNextToken();
+  }
+  else{
+    Tokens->applyTokenIndex(bkup);
+    return false;
+  }
+  // "="
+  if(Tokens->getCurType() == TOK_SYMBOL && Tokens->getCurString() == "="){
+    Tokens->getNextToken();
+  }
+  else{
+    Tokens->applyTokenIndex(bkup);
+    return false;
+  }
+  // 実際の型（int/char/double または 構造体名）
+  std::string real_type;
+  if(Tokens->getCurType() == TOK_INT){ real_type = "int"; Tokens->getNextToken(); }
+  else if(Tokens->getCurType() == TOK_CHAR){ real_type = "char"; Tokens->getNextToken(); }
+  else if(Tokens->getCurType() == TOK_DOUBLE){ real_type = "double"; Tokens->getNextToken(); }
+  else if(Tokens->getCurType() == TOK_IDENTIFIER &&
+          StructTable.find(Tokens->getCurString()) != StructTable.end()){
+    real_type = Tokens->getCurString();
+    Tokens->getNextToken();
+  }
+  else{
+    Tokens->applyTokenIndex(bkup);
+    return false;
+  }
+  // ";"
+  if(Tokens->getCurType() == TOK_SYMBOL && Tokens->getCurString() == ";"){
+    Tokens->getNextToken();
+  }
+  else{
+    Tokens->applyTokenIndex(bkup);
+    return false;
+  }
+  // 登録
+  TypeAliasTable[alias_name] = real_type;
+  return true;
 }
 PrototypeAST *Parser::visitFunctionDeclaration(){
   int bkup = Tokens->getCurIndex();
@@ -956,6 +1011,11 @@ VariableDeclAST *Parser::visitVariableDeclaration(){
   else if(Tokens->getCurType() == TOK_IDENTIFIER &&
           StructTable.find(Tokens->getCurString()) != StructTable.end()){
     type_name = Tokens->getCurString();
+    Tokens->getNextToken();
+  }
+  else if(Tokens->getCurType() == TOK_IDENTIFIER &&
+          TypeAliasTable.find(Tokens->getCurString()) != TypeAliasTable.end()){
+    type_name = TypeAliasTable[Tokens->getCurString()];
     Tokens->getNextToken();
   }
   else{
