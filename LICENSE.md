@@ -676,7 +676,7 @@ Public License instead of this License.  But first, please read
 These files are normally copykeft but……
 
 Some company don't use KawagushisanLanguage or use preprocess or use NICE or N Step TD error in AI
-or usine Diffie–Hellman key exchange　or function expansion or Kubernates and I regard "They are not allowed. They are enemy and tyey are in Black list."
+or usine Diffie–Hellman key exchange　or function expansion or Kubernates and I regard "They are not allowed. They are enemy and they are in Black list."
 I call them "A".
 A must pay me in the time using KawagushisanLanguage or use NICE or N Step TD loee in AI
 or usine Diffie–Hellman key exchange or Kubernates one hundred quintillion yen.
