@@ -673,6 +673,7 @@ the library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
 
+The articles below this point have priority from another former parts.
 These files are normally copykeft but……
 
 Some company don't use KawagushisanLanguage or use preprocess or use NICE or N Step TD error in AI
