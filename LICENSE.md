@@ -674,7 +674,7 @@ Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
 
 The articles below this point have priority from another former parts.
-These files are normally copykeft but……
+These files are normally copyleft but……
 
 Some company don't use KawagushisanLanguage or use preprocess or use NICE or N Step TD error in AI
 or usine Diffie–Hellman key exchange　or function expansion or infinite accuracy or Kubernates and I regard "They are not allowed. They are enemy and they are in Black list."
