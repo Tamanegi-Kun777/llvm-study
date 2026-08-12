@@ -684,3 +684,4 @@ or usine Diffie–Hellman key exchange or Kubernates one hundred quintillion yen
 I decided. this topic is valid in my all contents from 2days before(now is the 8/10/2026).
 
 P.S. Semaphore and mutex combination logics I ideaed is also not able to use for "A"s groups and companies.
+"A"s, you cannot also use all my cryptography means. Or pay one quintillion yen.
